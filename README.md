@@ -69,6 +69,7 @@ deepgram_live:
   keyterms:
     - Hermes
   allow_key_fallback: false
+  mip_opt_out: true
 ```
 
 | Setting | What it does |
@@ -79,11 +80,12 @@ deepgram_live:
 | `eot_timeout_ms` | Silence in milliseconds that ends your turn whatever the confidence. |
 | `speed` | Speaking speed. 1.0 is normal. |
 | `keyterms` | Words that are easy to mishear, such as names. Add your own. |
+| `mip_opt_out` | On by default. Keeps your audio and text out of Deepgram's Model Improvement Program. Set it to `false` if you are happy for Deepgram to use your data to improve their models. |
 | `allow_key_fallback` | Only if your key lacks the Member role. Hands the full key to the app's memory. Leave it off if you can. |
 
 ## Privacy
 
-Every request to Deepgram asks to stay out of their Model Improvement Program. Your audio and text are not used to train their models. Audio is still sent to Deepgram to be turned into text and speech, so check their terms if that matters to you.
+By default, every request to Deepgram asks to stay out of their Model Improvement Program, so your audio and text are not used to train their models. If you would rather help improve them, set `mip_opt_out: false` in the settings above. Audio is still sent to Deepgram to be turned into text and speech, so check their terms if that matters to you.
 
 ## Troubleshooting
 

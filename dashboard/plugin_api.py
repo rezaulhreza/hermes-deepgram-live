@@ -35,6 +35,8 @@ DEFAULTS: dict[str, Any] = {
     # Hand the long-lived key to the renderer when the key cannot mint tokens (it lacks the
     # Member role). Off by default: with it on, the key is held in the app's memory.
     "allow_key_fallback": False,
+    # Ask Deepgram to keep audio and text out of its Model Improvement Program. On by default.
+    "mip_opt_out": True,
 }
 
 
@@ -73,7 +75,7 @@ def status() -> dict[str, Any]:
     return {
         "available": available,
         "reason": None if available else "DEEPGRAM_API_KEY is not set in the Hermes .env",
-        **{key: settings[key] for key in ("voice", "listen_model", "eot_threshold", "eot_timeout_ms", "speed", "keyterms")},
+        **{key: settings[key] for key in ("voice", "listen_model", "eot_threshold", "eot_timeout_ms", "speed", "keyterms", "mip_opt_out")},
     }
 
 

@@ -9,7 +9,8 @@
  *
  * The Deepgram key stays on the backend half (~/.hermes/plugins/deepgram-live): every socket
  * opened here is authorised with a 30 second token from `ctx.rest('/auth')`. All requests carry
- * `mip_opt_out=true`, so nothing is used to train Deepgram's models.
+ * `mip_opt_out=true` unless the `mip_opt_out` setting is turned off, so by default nothing is used
+ * to train Deepgram's models.
  *
  * Plain ESM, loaded uncompiled: UI is jsx() calls, and only the SDK and react resolve.
  */
@@ -458,7 +459,7 @@ class LiveVoice {
       encoding: 'linear16',
       eot_threshold: String(this.settings.eot_threshold),
       eot_timeout_ms: String(this.settings.eot_timeout_ms),
-      mip_opt_out: 'true',
+      mip_opt_out: String(this.settings.mip_opt_out !== false),
       model: this.settings.listen_model,
       sample_rate: String(INPUT_SAMPLE_RATE)
     })
@@ -517,7 +518,7 @@ class LiveVoice {
     if (!this.speakOpening) {
       const params = new URLSearchParams({
         encoding: 'linear16',
-        mip_opt_out: 'true',
+        mip_opt_out: String(this.settings.mip_opt_out !== false),
         model: this.settings.voice,
         sample_rate: String(OUTPUT_SAMPLE_RATE)
       })
