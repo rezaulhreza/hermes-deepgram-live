@@ -1,0 +1,13 @@
+manifest_version: 1
+name: deepgram-live
+version: 0.1.0
+description: "Live voice for the desktop app: Deepgram listens and speaks over streaming sockets, while Hermes stays the only model. Narrates tool work and takes spoken approvals."
+author: rezaulhreza
+kind: backend
+provides_hooks:
+  - pre_llm_call
+requires_env:
+  - name: DEEPGRAM_API_KEY
+    description: "Deepgram API key with the Member role (needed to mint short-lived tokens)"
+    url: "https://console.deepgram.com/"
+    secret: true

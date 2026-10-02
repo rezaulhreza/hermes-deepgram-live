@@ -1,0 +1,8 @@
+{
+  "name": "deepgram-live",
+  "label": "Deepgram Live Voice",
+  "description": "Backend routes for the desktop live-voice plugin (token minting, spoken-turn marking).",
+  "version": "0.1.0",
+  "tab": { "path": "/deepgram-live", "hidden": true },
+  "api": "plugin_api.py"
+}
