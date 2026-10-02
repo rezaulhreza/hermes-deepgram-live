@@ -37,23 +37,36 @@ Your key never leaves your machine.
 
 ## Install
 
-1. Clone this repo and run the installer.
+Pick one. Both give the same result.
 
-   ```sh
-   git clone https://github.com/rezaulhreza/hermes-deepgram-live.git
-   cd hermes-deepgram-live
-   ./install.sh
-   ```
+### Option 1. The Hermes command
 
-2. Create a key at https://console.deepgram.com/ and choose the Member role (see "About the key" above).
-3. Add it to `~/.hermes/.env`.
+```sh
+hermes plugins install rezaulhreza/hermes-deepgram-live --enable
+```
+
+Hermes warns that this is not from its own catalogue and asks you to confirm. Run it in a normal terminal window so it can ask. Then add your key.
+
+1. Create a key at https://console.deepgram.com/ and choose the Member role (see "About the key" above).
+2. Add it to `~/.hermes/.env`.
 
    ```
    DEEPGRAM_API_KEY=your-key-here
    ```
 
-4. Add `deepgram-live` to the enabled plugins in `~/.hermes/config.yaml`.
-5. Restart Hermes.
+3. Restart Hermes and the desktop app.
+
+### Option 2. The installer script
+
+```sh
+git clone https://github.com/rezaulhreza/hermes-deepgram-live.git
+cd hermes-deepgram-live
+./install.sh
+```
+
+The script copies the plugin into `~/.hermes`, asks for your key and saves it for you, then switches the plugin on. It does not show the key as you type, and it will not add the key twice if you run it again. Restart Hermes and the desktop app afterwards.
+
+The desktop half lives in the `desktop` folder. The Hermes desktop app picks it up from there on its own, so there is nothing extra to install.
 
 ## Settings
 
