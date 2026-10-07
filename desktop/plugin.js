@@ -271,6 +271,11 @@ class LiveVoice {
     this.handledApprovals = new Set()
     this.approvalTimer = null
     this.listenRetries = 0
+    // Readiness for the wake claim. The claim runs synchronously, so it reads
+    // this cache rather than waiting on /status; loadAvailability() fills it.
+    this.available = false
+    // True while this session exists because the wake word handed it over.
+    this.wakeClaimed = false
   }
 
   // ── lifecycle ────────────────────────────────────────────────────────────────────────────────
@@ -285,6 +290,7 @@ class LiveVoice {
 
     try {
       this.settings = await this.ctx.rest('/status')
+      this.available = Boolean(this.settings?.available)
 
       if (!this.settings?.available) {
         throw new Error(this.settings?.reason || 'Deepgram is not configured')
@@ -345,6 +351,30 @@ class LiveVoice {
     this.approval = null
     this.pendingText = ''
     $phase.set('off')
+
+    // A wake-claimed session must hand the microphone back, or the wake word
+    // never fires again: the app stopped its client-capture PCM feed when it
+    // handed this wake over, so ask it to re-arm.
+    if (this.wakeClaimed) {
+      this.wakeClaimed = false
+      void this.ctx.rearmWake?.()
+    }
+  }
+
+  /** Cache the /status verdict so a wake claim can answer without awaiting it. */
+  async loadAvailability() {
+    try {
+      const settings = await this.ctx.rest('/status')
+      this.available = Boolean(settings?.available)
+    } catch {
+      this.available = false
+    }
+  }
+
+  /** The wake word fired and this plugin owns the hand-off. */
+  startFromWake() {
+    this.wakeClaimed = true
+    void this.start()
   }
 
   toggle() {
@@ -1100,6 +1130,30 @@ export default {
     ctx.onEvent('message.interim', event => voice.onMessageInterim(event))
     ctx.onEvent('tool.start', event => voice.onToolStart(event))
     ctx.onEvent('message.complete', event => voice.onMessageComplete(event))
+
+    // The wake word: with the desktop's wake hand-off seam, this plugin takes
+    // the wake and opens its own streaming session, so the app's voice chat
+    // stays shut and one front end holds the microphone. Without the seam
+    // (older desktop) Hermes' own voice chat answers the wake as before.
+    if (typeof ctx.onWake === 'function') {
+      ctx.onWake(() => {
+        if (voice.active) {
+          return true
+        }
+
+        if (!voice.available) {
+          // Deepgram is not ready: leave the wake to Hermes' voice chat, but
+          // re-check in case the key has been added since we armed.
+          void voice.loadAvailability()
+          return false
+        }
+
+        voice.startFromWake()
+        return true
+      })
+
+      void voice.loadAvailability()
+    }
 
     ctx.registerMany([
       {
