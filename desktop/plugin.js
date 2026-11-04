@@ -22,6 +22,8 @@ const ID = 'deepgram-live'
 
 const LISTEN_URL = 'wss://api.deepgram.com/v2/listen'
 const SPEAK_URL = 'wss://api.deepgram.com/v1/speak'
+// Flux voices (flux-…) speak here, with other messages: Flush ends a turn and has no rate limit.
+const FLUX_SPEAK_URL = 'wss://api.deepgram.com/v2/speak'
 const INPUT_SAMPLE_RATE = 16000
 const OUTPUT_SAMPLE_RATE = 24000
 
@@ -499,6 +501,10 @@ class LiveVoice {
       params.append('keyterm', term)
     }
 
+    if (this.settings.language_hint) {
+      params.set('language_hint', this.settings.language_hint)
+    }
+
     const socket = await this.openSocket(`${LISTEN_URL}?${params}`)
 
     if (!this.active) {
@@ -558,7 +564,11 @@ class LiveVoice {
         params.set('speed', String(this.settings.speed))
       }
 
-      this.speakOpening = this.openSocket(`${SPEAK_URL}?${params}`)
+      if (this.flux() && Number(this.settings.expressivity)) {
+        params.set('expressivity', String(Math.trunc(Number(this.settings.expressivity))))
+      }
+
+      this.speakOpening = this.openSocket(`${this.flux() ? FLUX_SPEAK_URL : SPEAK_URL}?${params}`)
         .then(socket => {
           if (!this.active) {
             socket.close()
@@ -584,6 +594,11 @@ class LiveVoice {
     }
 
     return this.speakOpening
+  }
+
+  /** A Flux voice: it speaks on /v2/speak. */
+  flux() {
+    return String(this.settings?.voice || '').startsWith('flux-')
   }
 
   onSpeakMessage(data) {
@@ -628,8 +643,11 @@ class LiveVoice {
 
     void this.ensureSpeak()
       .then(socket => {
-        for (let index = 0; index < line.length; index += SPEAK_TEXT_LIMIT) {
-          socket.send(JSON.stringify({ text: line.slice(index, index + SPEAK_TEXT_LIMIT), type: 'Speak' }))
+        // Flux joins the text of a turn as it is, so each line ends with a space.
+        const text = this.flux() ? `${line} ` : line
+
+        for (let index = 0; index < text.length; index += SPEAK_TEXT_LIMIT) {
+          socket.send(JSON.stringify({ text: text.slice(index, index + SPEAK_TEXT_LIMIT), type: 'Speak' }))
         }
 
         this.unflushed = true
@@ -643,7 +661,8 @@ class LiveVoice {
       return
     }
 
-    const wait = this.lastFlushAt + FLUSH_MIN_INTERVAL_MS - Date.now()
+    // Flux has no limit on Flush. Aura does.
+    const wait = this.flux() ? 0 : this.lastFlushAt + FLUSH_MIN_INTERVAL_MS - Date.now()
 
     if (wait > 0) {
       this.flushTimer = window.setTimeout(() => {
@@ -673,7 +692,16 @@ class LiveVoice {
     this.pendingText = ''
 
     if (this.speak?.readyState === WebSocket.OPEN) {
-      this.speak.send(JSON.stringify({ type: 'Clear' }))
+      if (this.flux()) {
+        // Flux's Interrupt cancels only the line being spoken, not the ones queued after it.
+        // Closing the socket drops them all; the next line opens a new one.
+        const socket = this.speak
+
+        this.speak = null
+        socket.close()
+      } else {
+        this.speak.send(JSON.stringify({ type: 'Clear' }))
+      }
     }
 
     this.worklet?.port.postMessage({ type: 'clear' })

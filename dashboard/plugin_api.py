@@ -23,8 +23,15 @@ GRANT_URL = "https://api.deepgram.com/v1/auth/grant"
 TOKEN_TTL_SECONDS = 30
 
 DEFAULTS: dict[str, Any] = {
+    # An Aura voice (aura-2-…) or a Flux voice (flux-…). Flux voices speak on /v2/speak.
     "voice": "aura-2-thalia-en",
+    # The language the user speaks: en-GB, en-US, fr, de, … or "multi" for any. It picks the
+    # listening model: English has its own, every other language uses the multilingual one.
+    "language": "en-GB",
+    # Only when "language" is empty: the listening model as it is.
     "listen_model": "flux-general-en",
+    # How lively a Flux voice sounds, -2 (calm) to 2 (animated). Aura voices ignore it.
+    "expressivity": 0,
     # Confidence at which the listening model calls the user's turn finished; lower answers sooner, higher
     # tolerates mid-sentence pauses.
     "eot_threshold": 0.7,
@@ -66,6 +73,18 @@ def _settings() -> dict[str, Any]:
     return merged
 
 
+def _listening(settings: dict[str, Any]) -> tuple[str, str | None]:
+    """The listening model and the language hint for the chosen language."""
+    language = str(settings.get("language") or "").strip()
+    if not language:
+        return str(settings["listen_model"]), None
+    if language.lower().startswith("en"):
+        return "flux-general-en", None
+    if language == "multi":
+        return "flux-general-multi", None
+    return "flux-general-multi", language.split("-")[0].lower()
+
+
 def _api_key() -> str:
     from hermes_cli.config import get_env_value
 
@@ -77,10 +96,13 @@ def status() -> dict[str, Any]:
     """Non-secret readiness and the session settings the desktop half connects with."""
     settings = _settings()
     available = bool(_api_key())
+    listen_model, language_hint = _listening(settings)
     return {
         "available": available,
         "reason": None if available else "DEEPGRAM_API_KEY is not set in the Hermes .env",
-        **{key: settings[key] for key in ("voice", "listen_model", "eot_threshold", "eot_timeout_ms", "eager_eot_threshold", "numerals", "speed", "keyterms", "mip_opt_out")},
+        **{key: settings[key] for key in ("voice", "language", "eot_threshold", "eot_timeout_ms", "eager_eot_threshold", "numerals", "speed", "expressivity", "keyterms", "mip_opt_out")},
+        "listen_model": listen_model,
+        "language_hint": language_hint,
     }
 
 

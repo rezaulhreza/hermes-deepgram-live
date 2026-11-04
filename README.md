@@ -75,7 +75,8 @@ Everything is optional. Add a `deepgram_live` section to `~/.hermes/config.yaml`
 ```yaml
 deepgram_live:
   voice: aura-2-thalia-en
-  listen_model: flux-general-en
+  language: en-GB
+  expressivity: 0
   eot_threshold: 0.7
   eot_timeout_ms: 3000
   eager_eot_threshold: 0.5
@@ -89,8 +90,9 @@ deepgram_live:
 
 | Setting | What it does |
 | --- | --- |
-| `voice` | The Aura voice that speaks. |
-| `listen_model` | The Deepgram model that listens. The default is English. Other languages are untested. |
+| `voice` | The voice that speaks. An Aura voice such as `aura-2-thalia-en`, or a Flux voice such as `flux-colin-en`. See Deepgram's voice lists. |
+| `language` | The language you speak: `en-GB`, `en-US`, `fr`, `de`, `es`, `it`, `pt`, `nl`, `ja`, `hi`, `ru`, or `multi` for any of them. English is heard best. Pick a voice in the same language. |
+| `expressivity` | Flux voices only: from `-2` (calm) to `2` (animated). `0` is normal. |
 | `eot_threshold` | How sure Deepgram must be that you have finished. Lower answers sooner. Higher waits through pauses. |
 | `eot_timeout_ms` | Silence in milliseconds that ends your turn whatever the confidence. |
 | `eager_eot_threshold` | For other apps that use this plugin, such as Brah: how sure Deepgram must be before it says you have probably finished, so the app can start early. It must not be above `eot_threshold`. The desktop app does not use it. |
