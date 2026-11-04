@@ -73,16 +73,22 @@ def _settings() -> dict[str, Any]:
     return merged
 
 
-def _listening(settings: dict[str, Any]) -> tuple[str, str | None]:
-    """The listening model and the language hint for the chosen language."""
+# The languages Flux hears. It tells when a turn ends. Every other language, and "multi" (any
+# language), goes to Nova-3, where a second of quiet ends a turn.
+FLUX_LANGUAGES = {"en", "es", "fr", "de", "hi", "ru", "pt", "ja", "it", "nl"}
+
+
+def _listening(settings: dict[str, Any]) -> tuple[str, str, str | None]:
+    """The listening engine (flux or nova), the model and the language hint."""
     language = str(settings.get("language") or "").strip()
     if not language:
-        return str(settings["listen_model"]), None
-    if language.lower().startswith("en"):
-        return "flux-general-en", None
-    if language == "multi":
-        return "flux-general-multi", None
-    return "flux-general-multi", language.split("-")[0].lower()
+        return "flux", str(settings["listen_model"]), None
+    base = language.split("-")[0].lower()
+    if base == "en":
+        return "flux", "flux-general-en", None
+    if base in FLUX_LANGUAGES:
+        return "flux", "flux-general-multi", base
+    return "nova", "nova-3", None if language == "multi" else language
 
 
 def _api_key() -> str:
@@ -96,11 +102,12 @@ def status() -> dict[str, Any]:
     """Non-secret readiness and the session settings the desktop half connects with."""
     settings = _settings()
     available = bool(_api_key())
-    listen_model, language_hint = _listening(settings)
+    listen_engine, listen_model, language_hint = _listening(settings)
     return {
         "available": available,
         "reason": None if available else "DEEPGRAM_API_KEY is not set in the Hermes .env",
         **{key: settings[key] for key in ("voice", "language", "eot_threshold", "eot_timeout_ms", "eager_eot_threshold", "numerals", "speed", "expressivity", "keyterms", "mip_opt_out")},
+        "listen_engine": listen_engine,
         "listen_model": listen_model,
         "language_hint": language_hint,
     }

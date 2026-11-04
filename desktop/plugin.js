@@ -21,6 +21,8 @@ import { jsx, jsxs } from 'react/jsx-runtime'
 const ID = 'deepgram-live'
 
 const LISTEN_URL = 'wss://api.deepgram.com/v2/listen'
+// Languages Flux does not hear go to Nova-3, which has no turn events (see NovaTurns).
+const NOVA_LISTEN_URL = 'wss://api.deepgram.com/v1/listen'
 const SPEAK_URL = 'wss://api.deepgram.com/v1/speak'
 // Flux voices (flux-…) speak here, with other messages: Flush ends a turn and has no rate limit.
 const FLUX_SPEAK_URL = 'wss://api.deepgram.com/v2/speak'
@@ -195,6 +197,61 @@ registerProcessor('deepgram-live-processor', DeepgramLiveProcessor)
 // ── text helpers ───────────────────────────────────────────────────────────────────────────────
 
 /** Lowercase words only: the form transcripts and spoken text are compared in. */
+/** Turns from Nova-3: the first words start a turn, a second of quiet (UtteranceEnd) ends it.
+ *  It gives the same TurnInfo messages Flux sends, so the rest of the plugin stays the same. */
+class NovaTurns {
+  constructor() {
+    this.finals = []
+    this.interim = ''
+    this.active = false
+  }
+
+  words() {
+    return [...this.finals, this.interim].filter(Boolean).join(' ')
+  }
+
+  feed(message) {
+    if (message.type === 'Results') {
+      const text = String(message.channel?.alternatives?.[0]?.transcript || '').trim()
+
+      if (!text) {
+        return []
+      }
+
+      if (message.is_final) {
+        this.finals.push(text)
+        this.interim = ''
+      } else {
+        this.interim = text
+      }
+
+      const events = []
+
+      if (!this.active) {
+        this.active = true
+        events.push({ type: 'TurnInfo', event: 'StartOfTurn', transcript: this.words() })
+      }
+
+      events.push({ type: 'TurnInfo', event: 'Update', transcript: this.words() })
+
+      return events
+    }
+
+    if (message.type === 'UtteranceEnd') {
+      const said = this.words()
+      const ended = this.active && said
+
+      this.finals = []
+      this.interim = ''
+      this.active = false
+
+      return ended ? [{ type: 'TurnInfo', event: 'EndOfTurn', transcript: said }] : []
+    }
+
+    return [message]
+  }
+}
+
 function normalise(text) {
   return text
     .toLowerCase()
@@ -487,6 +544,10 @@ class LiveVoice {
   }
 
   async openListen() {
+    if (this.settings.listen_engine === 'nova') {
+      return this.openNovaListen()
+    }
+
     const params = new URLSearchParams({
       encoding: 'linear16',
       eot_threshold: String(this.settings.eot_threshold),
@@ -516,6 +577,66 @@ class LiveVoice {
     socket.addEventListener('message', ({ data }) => {
       if (typeof data === 'string') {
         this.onListenMessage(data)
+      }
+    })
+    socket.addEventListener('close', () => {
+      if (this.listen === socket && this.active) {
+        this.listen = null
+        void this.reopenListen()
+      }
+    })
+    this.listen = socket
+    this.listenRetries = 0
+  }
+
+  /** Nova-3 with many languages, for the languages Flux does not hear. */
+  async openNovaListen() {
+    const params = new URLSearchParams({
+      encoding: 'linear16',
+      endpointing: '300',
+      interim_results: 'true',
+      language: 'multi',
+      mip_opt_out: String(this.settings.mip_opt_out !== false),
+      model: 'nova-3',
+      numerals: 'true',
+      sample_rate: String(INPUT_SAMPLE_RATE),
+      smart_format: 'true',
+      utterance_end_ms: '1000'
+    })
+
+    for (const term of this.settings.keyterms || []) {
+      params.append('keyterm', term)
+    }
+
+    if (this.settings.language_hint) {
+      params.set('language_hint', this.settings.language_hint)
+    }
+
+    const socket = await this.openSocket(`${NOVA_LISTEN_URL}?${params}`)
+
+    if (!this.active) {
+      socket.close()
+
+      return
+    }
+
+    const nova = new NovaTurns()
+
+    socket.addEventListener('message', ({ data }) => {
+      if (typeof data !== 'string') {
+        return
+      }
+
+      let message
+
+      try {
+        message = JSON.parse(data)
+      } catch {
+        return
+      }
+
+      for (const event of nova.feed(message)) {
+        this.onListenMessage(JSON.stringify(event))
       }
     })
     socket.addEventListener('close', () => {

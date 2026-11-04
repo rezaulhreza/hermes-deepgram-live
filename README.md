@@ -91,7 +91,7 @@ deepgram_live:
 | Setting | What it does |
 | --- | --- |
 | `voice` | The voice that speaks. An Aura voice such as `aura-2-thalia-en`, or a Flux voice such as `flux-colin-en`. See Deepgram's voice lists. |
-| `language` | The language you speak: `en-GB`, `en-US`, `fr`, `de`, `es`, `it`, `pt`, `nl`, `ja`, `hi`, `ru`, or `multi` for any of them. English is heard best. Pick a voice in the same language. |
+| `language` | The language you speak, as a code: `en-GB`, `en-US`, `fr`, `bn`, `ar`, `ko`, … or `multi` for any language. Ten languages (English, Spanish, French, German, Hindi, Russian, Portuguese, Japanese, Italian, Dutch) use Flux, which hears when you have finished. Every other language Deepgram hears live uses Nova-3, where a second of quiet ends your turn. |
 | `expressivity` | Flux voices only: from `-2` (calm) to `2` (animated). `0` is normal. |
 | `eot_threshold` | How sure Deepgram must be that you have finished. Lower answers sooner. Higher waits through pauses. |
 | `eot_timeout_ms` | Silence in milliseconds that ends your turn whatever the confidence. |
