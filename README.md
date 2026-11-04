@@ -78,6 +78,8 @@ deepgram_live:
   listen_model: flux-general-en
   eot_threshold: 0.7
   eot_timeout_ms: 3000
+  eager_eot_threshold: 0.5
+  numerals: true
   speed: 1.0
   keyterms:
     - Hermes
@@ -91,6 +93,8 @@ deepgram_live:
 | `listen_model` | The Deepgram model that listens. The default is English. Other languages are untested. |
 | `eot_threshold` | How sure Deepgram must be that you have finished. Lower answers sooner. Higher waits through pauses. |
 | `eot_timeout_ms` | Silence in milliseconds that ends your turn whatever the confidence. |
+| `eager_eot_threshold` | For other apps that use this plugin, such as Brah: how sure Deepgram must be before it says you have probably finished, so the app can start early. It must not be above `eot_threshold`. The desktop app does not use it. |
+| `numerals` | On by default. Writes numbers you say as digits: "25", "10 pm". |
 | `speed` | Speaking speed. 1.0 is normal. |
 | `keyterms` | Words that are easy to mishear, such as names. Add your own. |
 | `mip_opt_out` | On by default. Keeps your audio and text out of Deepgram's Model Improvement Program. Set it to `false` if you are happy for Deepgram to use your data to improve their models. |

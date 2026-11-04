@@ -30,6 +30,11 @@ DEFAULTS: dict[str, Any] = {
     "eot_threshold": 0.7,
     # Silence that ends a turn regardless of confidence.
     "eot_timeout_ms": 3000,
+    # Confidence for the early end of turn, for clients that start work before the turn is final
+    # (Brah). It must not be above eot_threshold. The desktop half does not use it.
+    "eager_eot_threshold": 0.5,
+    # Write spoken numbers as digits: "25", "10 pm", "3D".
+    "numerals": True,
     "speed": 1.0,
     "keyterms": ["Hermes"],
     # Hand the long-lived key to the renderer when the key cannot mint tokens (it lacks the
@@ -75,7 +80,7 @@ def status() -> dict[str, Any]:
     return {
         "available": available,
         "reason": None if available else "DEEPGRAM_API_KEY is not set in the Hermes .env",
-        **{key: settings[key] for key in ("voice", "listen_model", "eot_threshold", "eot_timeout_ms", "speed", "keyterms", "mip_opt_out")},
+        **{key: settings[key] for key in ("voice", "listen_model", "eot_threshold", "eot_timeout_ms", "eager_eot_threshold", "numerals", "speed", "keyterms", "mip_opt_out")},
     }
 
 

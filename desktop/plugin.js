@@ -491,6 +491,7 @@ class LiveVoice {
       eot_timeout_ms: String(this.settings.eot_timeout_ms),
       mip_opt_out: String(this.settings.mip_opt_out !== false),
       model: this.settings.listen_model,
+      numerals: String(this.settings.numerals !== false),
       sample_rate: String(INPUT_SAMPLE_RATE)
     })
 
