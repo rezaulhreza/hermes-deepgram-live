@@ -102,6 +102,8 @@ deepgram_live:
 | `mip_opt_out` | On by default. Keeps your audio and text out of Deepgram's Model Improvement Program. Set it to `false` if you are happy for Deepgram to use your data to improve their models. |
 | `allow_key_fallback` | Only if your key lacks the Member role. Hands the full key to the app's memory. Leave it off if you can. |
 
+Another app can change `voice`, `language` and `expressivity` for you with `POST /api/plugins/deepgram-live/settings`, for example the Hermes phone app. The change goes into this section of `config.yaml`, so every app on the host speaks the same way.
+
 ## Privacy
 
 By default, every request to Deepgram asks to stay out of their Model Improvement Program, so your audio and text are not used to train their models. If you would rather help improve them, set `mip_opt_out: false` in the settings above. Audio is still sent to Deepgram to be turned into text and speech, so check their terms if that matters to you.

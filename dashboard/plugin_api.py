@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import importlib.util
 import logging
+import re
 from pathlib import Path
 from typing import Any
 
@@ -152,3 +153,44 @@ def turn(body: SpokenTurn) -> dict[str, bool]:
     if body.text.strip():
         voice_state.announce(body.text)
     return {"ok": True}
+
+
+# A Deepgram voice id (aura-2-thalia-en, flux-colin-en) and a language code (en-GB, fr, multi).
+VOICE_ID = re.compile(r"^(aura(-2)?|flux)-[a-z0-9]+(-[a-z0-9]+)*$")
+LANGUAGE_CODE = re.compile(r"^(multi|[a-z]{2,3}(-[A-Za-z0-9]{2,4})?)$")
+
+
+class VoiceSettings(BaseModel):
+    voice: str | None = None
+    language: str | None = None
+    expressivity: int | None = None
+
+
+@router.post("/settings")
+def save_settings(body: VoiceSettings) -> dict[str, Any]:
+    """Save the voice, the language and the expressivity in config.yaml, so every client of this
+    host (the desktop, Brah, the phone) speaks the same way. Returns the new status."""
+    change: dict[str, Any] = {}
+    if body.voice is not None:
+        if not VOICE_ID.match(body.voice):
+            raise HTTPException(status_code=400, detail="That is not a Deepgram voice.")
+        change["voice"] = body.voice
+    if body.language is not None:
+        if not LANGUAGE_CODE.match(body.language):
+            raise HTTPException(status_code=400, detail="That is not a language code.")
+        change["language"] = body.language
+    if body.expressivity is not None:
+        if not -2 <= body.expressivity <= 2:
+            raise HTTPException(status_code=400, detail="Expressivity runs from -2 to 2.")
+        change["expressivity"] = body.expressivity
+    if not change:
+        raise HTTPException(status_code=400, detail="Nothing to change.")
+
+    from hermes_cli.config import load_config, save_config
+
+    config = load_config()
+    section = dict(config.get("deepgram_live") or {})
+    section.update(change)
+    config["deepgram_live"] = section
+    save_config(config)
+    return status()
