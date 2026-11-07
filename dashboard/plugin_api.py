@@ -164,12 +164,19 @@ class VoiceSettings(BaseModel):
     voice: str | None = None
     language: str | None = None
     expressivity: int | None = None
+    keyterms: list[str] | None = None
+
+
+# Deepgram takes up to 100 key terms; each one is a word or a short phrase.
+MAX_KEYTERMS = 100
+MAX_KEYTERM_LENGTH = 50
 
 
 @router.post("/settings")
 def save_settings(body: VoiceSettings) -> dict[str, Any]:
-    """Save the voice, the language and the expressivity in config.yaml, so every client of this
-    host (the desktop, Brah, the phone) speaks the same way. Returns the new status."""
+    """Save the voice, the language, the expressivity and the key terms in config.yaml, so every
+    client of this host (the desktop, Brah, the phone) hears and speaks the same way. Returns the
+    new status."""
     change: dict[str, Any] = {}
     if body.voice is not None:
         if not VOICE_ID.match(body.voice):
@@ -183,6 +190,15 @@ def save_settings(body: VoiceSettings) -> dict[str, Any]:
         if not -2 <= body.expressivity <= 2:
             raise HTTPException(status_code=400, detail="Expressivity runs from -2 to 2.")
         change["expressivity"] = body.expressivity
+    if body.keyterms is not None:
+        terms: list[str] = []
+        for term in (" ".join(raw.split()) for raw in body.keyterms):
+            if term and term.lower() not in {known.lower() for known in terms}:
+                terms.append(term)
+        if len(terms) > MAX_KEYTERMS or any(len(term) > MAX_KEYTERM_LENGTH for term in terms):
+            raise HTTPException(
+                status_code=400, detail=f"Use at most {MAX_KEYTERMS} key terms of at most {MAX_KEYTERM_LENGTH} characters.")
+        change["keyterms"] = terms
     if not change:
         raise HTTPException(status_code=400, detail="Nothing to change.")
 
